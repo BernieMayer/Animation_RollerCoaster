@@ -64,6 +64,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 {
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
         glfwSetWindowShouldClose(window, GL_TRUE);
+    else if (key == GLFW_KEY_P && action == GLFW_PRESS)
+    {
+      std::cout << "Now printing to the camera location (" << activeCamera->pos.x << "," << activeCamera->pos.y << "," << activeCamera->pos.z << ")" <<"\n";
+    }
 }
 
 void mouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
@@ -316,18 +320,34 @@ void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 {
 
+    vector<vec3> controlPoints;
+    int subdivisions = 1;
 
-    points->push_back(vec3(0,0,0));
-    points->push_back(vec3(2,0,0));
-    points->push_back(vec3(1,1,2));
-    points->push_back(vec3(2,0,2));
-    points->push_back(vec3(0,0,2));
-    points->push_back(vec3(0,0,0));
+    controlPoints.push_back(vec3(0,0,0));
+    controlPoints.push_back(vec3(2,0,0));
+    controlPoints.push_back(vec3(2,1,1));
+    controlPoints.push_back(vec3(2,0,3));
+    controlPoints.push_back(vec3(0,0,2));
+    controlPoints.push_back(vec3(0,0,0));
 
     //points->push_back(vec3(7, 5, 3));
     //points->push_back(vec3(3, 0, 5));
     //points->push_back(vec3(1, 2, 3));
     //points->push_back(vec3(0,0,0));
+    int j;
+    for (int i = 0; i < subdivisions; i++)
+    {
+      vector<vec3> Q;
+      for ( j = 0; j < (controlPoints.size() - 1); j++)
+      {
+        Q.push_back(controlPoints.at(j));
+        Q.push_back( (  controlPoints.at(j) * 0.5f * + controlPoints.at(j + 1) * 0.5f));
+      }
+      Q.push_back(controlPoints.at(j));
+      *points = Q;
+    }
+
+
 
     for (int i = 0; i < points->size(); i++)
     {
@@ -427,7 +447,7 @@ int main(int argc, char *argv[])
 	loadBuffer(vbo, points, normals, indices);
   loadCurveBuffer(curve_vbo, curve_points, curve_normals);
 
-	Camera cam = Camera(vec3(0, 0, -1), vec3(0, 0, 1));
+	Camera cam = Camera(vec3(0, 0, -1), vec3(0.31649,-0.564746,4.26627));
 	activeCamera = &cam;
 	//float fovy, float aspect, float zNear, float zFar
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 20.f);
@@ -442,7 +462,7 @@ int main(int argc, char *argv[])
 		loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
 
         // call function to draw our scene
-        render(vao, 0, indices.size());
+        //render(vao, 0, indices.size());
 
         renderCurve(curve_vao, curve_points.size());
 
