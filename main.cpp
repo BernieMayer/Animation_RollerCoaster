@@ -197,6 +197,31 @@ bool loadBuffer(const VertexBuffers& vbo,
 	return !CheckGLErrors("loadBuffer");
 }
 
+bool loadCurveBuffer(const VertexBuffers& vbo,
+				const vector<vec3>& points,
+				const vector<vec3> normals)
+{
+  glBindBuffer(GL_ARRAY_BUFFER, vbo.id[VertexBuffers::VERTICES]);
+  glBufferData(
+    GL_ARRAY_BUFFER,				//Which buffer you're loading too
+    sizeof(vec3)*points.size(),		//Size of data in array (in bytes)
+    &points[0],						//Start of array (&points[0] will give you pointer to start of vector)
+    GL_STATIC_DRAW					//GL_DYNAMIC_DRAW if you're changing the data often
+                    //GL_STATIC_DRAW if you're changing seldomly
+    );
+
+  glBindBuffer(GL_ARRAY_BUFFER, vbo.id[VertexBuffers::NORMALS]);
+  glBufferData(
+    GL_ARRAY_BUFFER,				//Which buffer you're loading too
+    sizeof(vec3)*normals.size(),	//Size of data in array (in bytes)
+    &normals[0],					//Start of array (&points[0] will give you pointer to start of vector)
+    GL_STATIC_DRAW					//GL_DYNAMIC_DRAW if you're changing the data often
+                    //GL_STATIC_DRAW if you're changing seldomly
+    );
+
+    return !CheckGLErrors("loadBuffer");
+}
+
 //Compile and link shaders, storing the program ID in shader array
 GLuint initShader(string vertexName, string fragmentName)
 {
@@ -252,6 +277,17 @@ void render(GLuint vao, int startElement, int numElements)
 	CheckGLErrors("render");
 }
 
+void renderCurve(GLuint vao, int numPoints)
+{
+  glBindVertexArray(vao);
+
+  glDrawArrays( GL_LINE_STRIP, 0, numPoints);
+
+  glBindVertexArray(0);
+
+
+}
+
 
 void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 					vector<unsigned int>* indices, float width)
@@ -274,6 +310,31 @@ void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 	indices->push_back(2);
 	indices->push_back(3);
 	indices->push_back(0);
+}
+
+
+void generateCurve(vector<vec3>* points, vector<vec3>* normals)
+{
+
+
+    points->push_back(vec3(0,0,0));
+    points->push_back(vec3(2,0,0));
+    points->push_back(vec3(1,1,2));
+    points->push_back(vec3(2,0,2));
+    points->push_back(vec3(0,0,2));
+    points->push_back(vec3(0,0,0));
+
+    //points->push_back(vec3(7, 5, 3));
+    //points->push_back(vec3(3, 0, 5));
+    //points->push_back(vec3(1, 2, 3));
+    //points->push_back(vec3(0,0,0));
+
+    for (int i = 0; i < points->size(); i++)
+    {
+      normals->push_back(vec3(0.f, 0.f, 1.f));
+    }
+
+
 }
 
 GLFWwindow* createGLFWWindow()
@@ -336,11 +397,21 @@ int main(int argc, char *argv[])
 	GLuint vao;
 	VertexBuffers vbo;
 
+
+  GLuint curve_vao;
+  VertexBuffers curve_vbo;
+
 	//Generate object ids
 	glGenVertexArrays(1, &vao);
 	glGenBuffers(VertexBuffers::COUNT, vbo.id);
 
+
+  //Generate curve ids
+  glGenVertexArrays(1, &curve_vao);
+  glGenBuffers(VertexBuffers::COUNT, curve_vbo.id);
+
 	initVAO(vao, vbo);
+  initVAO(curve_vao, curve_vbo);
 
 	//Geometry information
 	vector<vec3> points, normals;
@@ -348,7 +419,13 @@ int main(int argc, char *argv[])
 
 	generateSquare(&points, &normals, &indices, 1.f);
 
+  vector<vec3> curve_points, curve_normals;
+  vector<unsigned int> curve_indices;
+
+  generateCurve(&curve_points, &curve_normals);
+
 	loadBuffer(vbo, points, normals, indices);
+  loadCurveBuffer(curve_vbo, curve_points, curve_normals);
 
 	Camera cam = Camera(vec3(0, 0, -1), vec3(0, 0, 1));
 	activeCamera = &cam;
@@ -366,6 +443,10 @@ int main(int argc, char *argv[])
 
         // call function to draw our scene
         render(vao, 0, indices.size());
+
+        renderCurve(curve_vao, curve_points.size());
+
+
 
         // scene is rendered to the back buffer, so swap to front for display
         glfwSwapBuffers(window);
