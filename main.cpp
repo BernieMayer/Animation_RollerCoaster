@@ -321,7 +321,7 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 {
 
     vector<vec3> controlPoints;
-    int subdivisions = 1;
+    int subdivisions = 5;
 
     controlPoints.push_back(vec3(0,0,0));
     controlPoints.push_back(vec3(2,0,0));
@@ -341,10 +341,18 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
       for ( j = 0; j < (controlPoints.size() - 1); j++)
       {
         Q.push_back(controlPoints.at(j));
-        Q.push_back( (  controlPoints.at(j) * 0.5f * + controlPoints.at(j + 1) * 0.5f));
+        Q.push_back(  (controlPoints.at(j) + controlPoints.at(j + 1)) * 0.5f);
       }
       Q.push_back(controlPoints.at(j));
+      controlPoints = Q;
       *points = Q;
+      points->clear();
+      int r;
+      for (r = 0; r < (Q.size() - 1); r++)
+      {
+        points->push_back((Q.at(r) + Q.at(r +1)) * 0.5f);
+      }
+      points->push_back((Q.at(r) + Q.at(0)) * 0.5f);
     }
 
 
