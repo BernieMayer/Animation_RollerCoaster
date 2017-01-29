@@ -317,49 +317,66 @@ void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 }
 
 
+vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
+{
+  //assume points is at least i + 1 in size
+  return vec3(0,0,0);
+}
+
+
+//This function will make a curve that will be used to make the coaster
 void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 {
 
     vector<vec3> controlPoints;
-    int subdivisions = 5;
+    int subdivisions = 3;
 
-    controlPoints.push_back(vec3(0,0,0));
-    controlPoints.push_back(vec3(2,0,0));
-    controlPoints.push_back(vec3(2,1,1));
-    controlPoints.push_back(vec3(2,0,3));
-    controlPoints.push_back(vec3(0,0,2));
-    controlPoints.push_back(vec3(0,0,0));
 
-    //points->push_back(vec3(7, 5, 3));
-    //points->push_back(vec3(3, 0, 5));
-    //points->push_back(vec3(1, 2, 3));
-    //points->push_back(vec3(0,0,0));
+    //Add the control points to the lists
+    //These points will determine the curve
+    points->push_back(vec3(0,0,0));
+    points->push_back(vec3(1,0,0));
+    points->push_back(vec3(2,0,0));
+    points->push_back(vec3(3,1,2));
+    points->push_back(vec3(3, 1,3));
+    points->push_back(vec3(3, 0, 5));
+    points->push_back(vec3(0, 0, 5));
+    points->push_back(vec3(0,0,0));
+
+
     int j;
     for (int i = 0; i < subdivisions; i++)
     {
       vector<vec3> Q;
-      for ( j = 0; j < (controlPoints.size() - 1); j++)
+      //Add the mid points of the control points to the set Q
+      for ( j = 0; j < (points->size() - 1); j++)
       {
-        Q.push_back(controlPoints.at(j));
-        Q.push_back(  (controlPoints.at(j) + controlPoints.at(j + 1)) * 0.5f);
+        Q.push_back(points->at(j));
+        Q.push_back((points->at(j) + points->at(j + 1)) * 0.5f);
       }
-      Q.push_back(controlPoints.at(j));
-      controlPoints = Q;
-      *points = Q;
+      //Makes sure the curve connects back to the start
+      Q.push_back(points->at(j));
+      //Q.push_back(points)
+
+      //Clear the points since we will want to make a new
+      //set of points
       points->clear();
       int r;
+      //Subdivide the curve so that the new set of points will be smoother
       for (r = 0; r < (Q.size() - 1); r++)
       {
         points->push_back((Q.at(r) + Q.at(r +1)) * 0.5f);
       }
-      points->push_back((Q.at(r) + Q.at(0)) * 0.5f);
+      //Add in the first point so that the curve will go back to the start
+      points->push_back(points->at(0));
     }
 
 
 
+    //Normals is poorly named here should actually be color
     for (int i = 0; i < points->size(); i++)
     {
-      normals->push_back(vec3(0.f, 0.f, 1.f));
+      normals->push_back(vec3(0.f, 0.f,1.f));
     }
 
 
