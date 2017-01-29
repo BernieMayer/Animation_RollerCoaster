@@ -19,6 +19,7 @@
 #include <cstdlib>
 
 #include "glm/glm.hpp"
+#include <glm/gtc/type_ptr.hpp>
 #include "glm/gtc/matrix_transform.hpp"
 
 // specify that we want the OpenGL core profile before including GLFW headers
@@ -287,10 +288,35 @@ void renderCurve(GLuint vao, int numPoints)
 
   glDrawArrays( GL_LINE_STRIP, 0, numPoints);
 
-  glBindVertexArray(0);
+  //glBindVertexArray(0);
+}
 
+void renderBead(GLuint programBead, vec3 beadPosition, mat4 perspective, mat4 modelview)
+{
+
+  glUseProgram(programBead);
+
+
+  glUniformMatrix4fv(glGetUniformLocation(programBead, "modelviewMatrix"),
+            1,
+            GL_FALSE,
+            glm::value_ptr(modelview));
+
+  glUniformMatrix4fv(glGetUniformLocation(programBead, "perspectiveMatrix"),
+            1,
+            GL_FALSE,
+            glm::value_ptr(perspective));
+
+  glUniform3fv(glGetUniformLocation(programBead, "beadPosition"), 1, glm::value_ptr(beadPosition) );
+
+  glPointSize(10.0f);
+  glDrawArrays(GL_POINTS, 0, 1);
+
+  CheckGLErrors("renderBead");
 
 }
+
+
 
 
 void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
@@ -319,6 +345,9 @@ void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 
 vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
 {
+
+
+
   //assume points is at least i + 1 in size
   return vec3(0,0,0);
 }
@@ -438,6 +467,9 @@ int main(int argc, char *argv[])
 
 	//Initialize shader
 	GLuint program = initShader("vertex.glsl", "fragment.glsl");
+  GLuint beadProg = initShader("bead.vert", "bead.frag");
+
+
 
 	GLuint vao;
 	VertexBuffers vbo;
@@ -492,6 +524,11 @@ int main(int argc, char *argv[])
         renderCurve(curve_vao, curve_points.size());
 
 
+        loadUniforms(beadProg, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
+
+        renderBead(beadProg, points.at(0), winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
+
+
 
         // scene is rendered to the back buffer, so swap to front for display
         glfwSwapBuffers(window);
@@ -503,7 +540,10 @@ int main(int argc, char *argv[])
 	// clean up allocated resources before exit
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(VertexBuffers::COUNT, vbo.id);
+  glDeleteVertexArrays(1, &curve_vao);
+  glDeleteBuffers(VertexBuffers::COUNT, curve_vbo.id);
 	glDeleteProgram(program);
+  glDeleteProgram(beadProg);
 
 
 	glfwDestroyWindow(window);
