@@ -555,7 +555,7 @@ int main(int argc, char *argv[])
         renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
 
 
-
+        ///
         //vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
         beadPos = arcLengthParameterization(beadPos, i, curve_points, 0.1f );
         std::cout << "i is " << i << "\n";
