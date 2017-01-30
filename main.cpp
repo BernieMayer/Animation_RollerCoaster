@@ -343,13 +343,36 @@ void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 }
 
 
-vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
+vec3 arcLengthParameterization(vec3 bead_pos, int& i, vector<vec3> points, double deltaS)
 {
 
-
-
+  vec3 newBeadPos;
+  int size = points.size();
   //assume points is at least i + 1 in size
-  return vec3(0,0,0);
+
+  //case 1, the distance between the next point is greater than deltaS
+  if (abs(length((points.at((i +1) % size) - bead_pos))) > deltaS)
+  {
+    newBeadPos = bead_pos + (points.at((i + 1) % size) - bead_pos) * (float)((deltaS * abs((points.at((i + 1)%size) - bead_pos).length())));
+    return newBeadPos;
+  } else
+  {
+    //The distance between the bead postion and the next point is less than or
+    //equal to deltaS
+
+    double s_prime = abs(length((points.at(i % size) - bead_pos)));
+    i +=1;
+
+    while (( s_prime + abs(length(points.at((i + 1) % size) - points.at(i % size) ))  ) < deltaS)
+    {
+      s_prime = s_prime + abs((length(points.at((i + 1) % size)  - points.at(i % size))));
+      i += 1;
+    }
+
+    newBeadPos = bead_pos + (points.at((i + 1)%size) - points.at(i % size)) * (float)((deltaS - s_prime)/(abs((length(points.at( (i+ 1) % size) - points.at(i % size))))));
+
+    return newBeadPos;
+  }
 }
 
 
@@ -358,7 +381,7 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 {
 
     vector<vec3> controlPoints;
-    int subdivisions = 3;
+    int subdivisions = 4;
 
 
     //Add the control points to the lists
@@ -508,7 +531,9 @@ int main(int argc, char *argv[])
 	activeCamera = &cam;
 	//float fovy, float aspect, float zNear, float zFar
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 20.f);
-
+  vec3 beadPos = curve_points.at(0);
+  double t = 0;
+  int i = 0;
     // run an event-triggered main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -524,17 +549,23 @@ int main(int argc, char *argv[])
         renderCurve(curve_vao, curve_points.size());
 
 
-        loadUniforms(beadProg, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
-
-        renderBead(beadProg, points.at(0), winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
+        //loadUniforms(beadProg, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
 
 
+        renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
+
+
+
+        //vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
+        beadPos = arcLengthParameterization(beadPos, i, curve_points, 0.1f );
+        std::cout << "i is " << i << "\n";
 
         // scene is rendered to the back buffer, so swap to front for display
         glfwSwapBuffers(window);
+        glfwSwapInterval(1);
 
         // sleep until next event before drawing again
-        glfwWaitEvents();
+        glfwPollEvents();
 	}
 
 	// clean up allocated resources before exit

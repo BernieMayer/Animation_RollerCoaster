@@ -1,6 +1,6 @@
 #version 430 core
 
-uniform mat4 modelviewMatrix = mat4(1.f);
+uniform mat4 modelviewMatrix;
 uniform mat4 perspectiveMatrix;
 
 uniform vec3 beadPosition;
