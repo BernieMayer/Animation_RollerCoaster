@@ -50,6 +50,8 @@ GLFWwindow* window = 0;
 
 mat4 winRatio = mat4(1.f);
 
+const vec3 GRAVITY = vec3(0, 9.81, 0);
+
 // --------------------------------------------------------------------------
 // GLFW callback functions
 
@@ -68,6 +70,7 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     else if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
       std::cout << "Now printing to the camera location (" << activeCamera->pos.x << "," << activeCamera->pos.y << "," << activeCamera->pos.z << ")" <<"\n";
+      //std::cout << "Now "
     }
 }
 
@@ -375,6 +378,25 @@ vec3 arcLengthParameterization(vec3 bead_pos, int& i, vector<vec3> points, doubl
   }
 }
 
+int highestPoint(std::vector<vec3> points)
+{
+  //assume points is at least one element
+
+  int index = 0;
+  vec3 highestPoint = points.at(0);
+
+  for (int i = 0; i < points.size(); i++)
+  {
+    if ( points.at(i).y > highestPoint.y)
+    {
+      index = i;
+      highestPoint = points.at(i);
+    }
+  }
+
+  return index;
+}
+
 
 //This function will make a curve that will be used to make the coaster
 void generateCurve(vector<vec3>* points, vector<vec3>* normals)
@@ -390,7 +412,7 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
     points->push_back(vec3(1,0,0));
     points->push_back(vec3(2,0,0));
     points->push_back(vec3(3,1,2));
-    points->push_back(vec3(3, 1,3));
+    points->push_back(vec3(3, 2,3));
     points->push_back(vec3(3, 0, 5));
     points->push_back(vec3(0, 0, 5));
     points->push_back(vec3(0,0,0));
@@ -524,6 +546,11 @@ int main(int argc, char *argv[])
 
   generateCurve(&curve_points, &curve_normals);
 
+  int index_of_highest_point = highestPoint(curve_points);
+  vec3 H = curve_points.at(index_of_highest_point);
+  cout << "The highestPoint has a y of " <<  H.y << "\n";
+  vec3 beadPos = curve_points.at(index_of_highest_point);
+
 	loadBuffer(vbo, points, normals, indices);
   loadCurveBuffer(curve_vbo, curve_points, curve_normals);
 
@@ -531,9 +558,8 @@ int main(int argc, char *argv[])
 	activeCamera = &cam;
 	//float fovy, float aspect, float zNear, float zFar
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 20.f);
-  vec3 beadPos = curve_points.at(0);
   double t = 0;
-  int i = 0;
+  int i = index_of_highest_point;
     // run an event-triggered main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -555,11 +581,18 @@ int main(int argc, char *argv[])
         renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
 
 
+        //note vs = v * delta_t
+
+        double v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 10.0f));
+
+        double vs = v * 1.f/60.f;
+
+
         ///
         //vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
-        beadPos = arcLengthParameterization(beadPos, i, curve_points, 0.1f );
-        std::cout << "i is " << i << "\n";
-
+        beadPos = arcLengthParameterization(beadPos,i , curve_points, vs);
+        //std::cout << "ds is " << vs << "\n";
+        i = i % curve_points.size();
         // scene is rendered to the back buffer, so swap to front for display
         glfwSwapBuffers(window);
         glfwSwapInterval(1);
