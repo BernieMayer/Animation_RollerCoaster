@@ -456,6 +456,24 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 
 }
 
+//This calculation is used to calculate the x value
+//The x value is an important part to calculating the
+//radius of the curvature circle of the curve
+double calculate_x(vec3 pos_prev, vec3 pos_current,vec3 pos_next)
+{
+
+  double x = 1.0f/2.0f * ( length(pos_next - 2.0f * pos_current + pos_prev));
+  return x;
+}
+
+//C is defined as the half distance between the past point and the future point
+double calculate_c(vec3 pos_past, vec3 pos_future)
+{
+  double c = 1.0f/2.0f * length(pos_future - pos_past);
+  return c;
+}
+
+
 GLFWwindow* createGLFWWindow()
 {
 	// initialize the GLFW windowing system
@@ -551,6 +569,9 @@ int main(int argc, char *argv[])
   cout << "The highestPoint has a y of " <<  H.y << "\n";
   vec3 beadPos = curve_points.at(index_of_highest_point);
 
+  vec3 beadPos_prev = beadPos;  //used to calculate the tangential acceleratiion
+  vec3 beadPos_future = beadPos_future; //used to calculate the tangential acceleratiion
+
 	loadBuffer(vbo, points, normals, indices);
   loadCurveBuffer(curve_vbo, curve_points, curve_normals);
 
@@ -581,6 +602,8 @@ int main(int argc, char *argv[])
         renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
 
 
+
+
         //note vs = v * delta_t
 
         double v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 10.0f));
@@ -590,7 +613,12 @@ int main(int argc, char *argv[])
 
         ///
         //vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
-        beadPos = arcLengthParameterization(beadPos,i , curve_points, vs);
+        beadPos_future = arcLengthParameterization(beadPos,i , curve_points, vs);
+        beadPos_prev = beadPos;
+
+        double r = pow(calculate_x(beadPos_prev, beadPos ,beadPos_future), 2) + pow(calculate_c(beadPos_prev, beadPos_future) ,2);
+
+        beadPos = beadPos_future;
         //std::cout << "ds is " << vs << "\n";
         i = i % curve_points.size();
         // scene is rendered to the back buffer, so swap to front for display
