@@ -28,6 +28,10 @@
 
 #include "camera.h"
 
+#include "Vec3f.h"
+#include "Vec3f_FileIO.h"
+
+
 #define PI 3.14159265359
 
 using namespace std;
@@ -39,6 +43,11 @@ void QueryGLVersion();
 string LoadSource(const string &filename);
 GLuint CompileShader(GLenum shaderType, const string &source);
 GLuint LinkProgram(GLuint vertexShader, GLuint fragmentShader);
+void loadVec3fFromFile( VectorContainerVec3f & vecs, std::string const & fileName );
+
+double calculate_x(vec3 pos_prev, vec3 pos_current,vec3 pos_next);
+double calculate_c(vec3 pos_past, vec3 pos_future);
+
 
 vec2 mousePos;
 bool leftmousePressed = false;
@@ -357,7 +366,7 @@ vec3 arcLengthParameterization(vec3 bead_pos, int& i, vector<vec3> points, doubl
   //case 1, the distance between the next point is greater than deltaS
   if (abs(length((points.at((i +1) % size) - bead_pos))) > deltaS)
   {
-    newBeadPos = bead_pos + (points.at((i + 1) % size) - bead_pos) * (float)((deltaS * abs((points.at((i + 1)%size) - bead_pos).length())));
+    newBeadPos = bead_pos + (points.at((i + 1) % size) - bead_pos) * (float)((deltaS / abs((length(points.at((i + 1)%size) - bead_pos)))));
     return newBeadPos;
   } else
   {
@@ -373,7 +382,7 @@ vec3 arcLengthParameterization(vec3 bead_pos, int& i, vector<vec3> points, doubl
       i += 1;
     }
 
-    newBeadPos = bead_pos + (points.at((i + 1)%size) - points.at(i % size)) * (float)((deltaS - s_prime)/(abs((length(points.at( (i+ 1) % size) - points.at(i % size))))));
+    newBeadPos = bead_pos + (points.at((i + 1)%size) - points.at(i % size)) * (float)(abs((deltaS - s_prime))/(abs((length(points.at( (i+ 1) % size) - points.at(i % size))))));
 
     return newBeadPos;
   }
@@ -399,17 +408,73 @@ int highestPoint(std::vector<vec3> points)
 }
 
 
+void generateSecondLineForTrack(vector<vec3> current_Points,
+                                vector<vec3>* newPoints,
+                                vector<vec3>* normals)
+{
+    for (int i = 0; i < current_Points.size(); i++)
+    {
+      vec3 posFuture = current_Points.at( (i + 1)%current_Points.size());
+      vec3 posPast = current_Points.at( (i - 1)%current_Points.size());
+      vec3 posCurrent = current_Points.at(i);
+
+      double x = calculate_x(posPast, posCurrent, posFuture);
+      double c = calculate_c(posPast, posFuture);
+
+      vec3 acc_perpendicular = (float)(1.0f/(pow(x,2) + pow(c,2)))
+                          * (posFuture - 2.0f * posCurrent + posPast);
+      vec3 normal = acc_perpendicular + GRAVITY;
+
+      vec3 Tangent = posFuture - posCurrent;
+      vec3 normalized_Tangent = normalize(Tangent);
+
+      vec3 normalized_normal = normalize(normal);
+
+      vec3 B = cross(normalized_Tangent, normalized_normal);
+      vec3 B_hat = normalize(B);
+
+      vec3 newPoint = current_Points.at(i) + 0.5f * B_hat;
+      newPoints->push_back(newPoint);
+    }
+
+    for (int j = 0; j < newPoints->size(); j++)
+    {
+      normals->push_back(vec3(0,1,0));
+    }
+}
+
 //This function will make a curve that will be used to make the coaster
 void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 {
 
     vector<vec3> controlPoints;
-    int subdivisions = 4;
+    int subdivisions = 5;
 
+    VectorContainerVec3f vectors;
+
+    std::string file("./Track2.con");
+    loadVec3fFromFile(vectors, file);
+
+    for (int i = 0; i < vectors.size(); i++)
+    {
+      Vec3f vec = vectors.at(i);
+      std::cout << vec << std::endl;
+      points->push_back(vec3(5 * vec.m_x, 0, 5 * vec.m_y));
+    }
+
+    points->at(0).y = 0;
+    points->at(2).y = 1.9;
+
+    points->at(3).y = 1.0;
+
+    points->at(5).y = 0.3;
+    //points->at(4).y = 0.2;
+
+    //points->at(5).y = 0.5;
 
     //Add the control points to the lists
     //These points will determine the curve
-    
+    /*
     points->push_back(vec3(0,0,0));
     points->push_back(vec3(1,0,0));
     points->push_back(vec3(2,0,0));
@@ -418,6 +483,7 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
     points->push_back(vec3(3, 0, 5));
     points->push_back(vec3(0, 0, 5));
     points->push_back(vec3(0,0,0));
+    */
 
 
 
@@ -544,6 +610,9 @@ int main(int argc, char *argv[])
   GLuint curve_vao;
   VertexBuffers curve_vbo;
 
+  GLuint curve2_vao;
+  VertexBuffers curve2_vbo;
+
 	//Generate object ids
 	glGenVertexArrays(1, &vao);
 	glGenBuffers(VertexBuffers::COUNT, vbo.id);
@@ -553,8 +622,12 @@ int main(int argc, char *argv[])
   glGenVertexArrays(1, &curve_vao);
   glGenBuffers(VertexBuffers::COUNT, curve_vbo.id);
 
+  glGenVertexArrays(1, &curve2_vao);
+  glGenBuffers(VertexBuffers::COUNT, curve2_vbo.id);
+
 	initVAO(vao, vbo);
   initVAO(curve_vao, curve_vbo);
+  initVAO(curve2_vao, curve2_vbo);
 
 	//Geometry information
 	vector<vec3> points, normals;
@@ -567,6 +640,9 @@ int main(int argc, char *argv[])
 
   generateCurve(&curve_points, &curve_normals);
 
+  vector<vec3> curve2_points, curve2_normals;
+  generateSecondLineForTrack(curve_points, &curve2_points, &curve2_normals);
+
   int index_of_highest_point = highestPoint(curve_points);
   vec3 H = curve_points.at(index_of_highest_point);
   cout << "The highestPoint has a y of " <<  H.y << "\n";
@@ -577,6 +653,9 @@ int main(int argc, char *argv[])
 
 	loadBuffer(vbo, points, normals, indices);
   loadCurveBuffer(curve_vbo, curve_points, curve_normals);
+  loadCurveBuffer(curve2_vbo, curve2_points, curve2_normals);
+
+
 
 	Camera cam = Camera(vec3(0, 0, -1), vec3(0.31649,-0.564746,4.26627));
 	activeCamera = &cam;
@@ -598,13 +677,14 @@ int main(int argc, char *argv[])
         //render(vao, 0, indices.size());
 
         renderCurve(curve_vao, curve_points.size());
+        renderCurve(curve2_vao, curve_points.size());
 
 
         //loadUniforms(beadProg, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
 
 
 
-        renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
+
 
 
 
@@ -612,15 +692,16 @@ int main(int argc, char *argv[])
         //note vs = v * delta_t
 
 
-        double v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 6.0f));
+        double v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 1.f ));
 
         double vs = v * 1.f/60.f;
 
 
         ///
         //vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
-        beadPos_future = arcLengthParameterization(beadPos,i , curve_points, vs);
-        beadPos_prev = beadPos;
+        beadPos = arcLengthParameterization(beadPos,i , curve_points, vs);
+        beadPos_prev = curve_points.at( (i - 10) % curve_points.size());
+        beadPos_future = curve_points.at( (i + 10) % curve_points.size());
 
         double x = calculate_x(beadPos_prev, beadPos ,beadPos_future);
         double c = calculate_c(beadPos_prev, beadPos_future);
@@ -638,7 +719,7 @@ int main(int argc, char *argv[])
         //Gravity is added in this case, since GRAVITY is positive
         vec3 Normal_cart = acc_perpendicular + GRAVITY;
 
-        vec3 Tangent = beadPos_future - beadPos;
+        vec3 Tangent = beadPos_future - beadPos_prev;
         vec3 T_tmp = normalize(Tangent);
 
         vec3 normalizd_Normal_cart = normalize(Normal_cart);
@@ -646,13 +727,14 @@ int main(int argc, char *argv[])
         vec3 B = cross(T_tmp, normalizd_Normal_cart);
         vec3 normalized_B = normalize(B);
 
-        mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_tmp,0), vec4(beadPos_future, 1));
-
+        vec3 T = cross(normalizd_Normal_cart, normalized_B);
+        vec3 T_hat = normalize(T);
+        mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos, 1));
         loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), ModelMatrix);
         render(vao, 0, indices.size());
 
 
-        beadPos = beadPos_future;
+        renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
         //std::cout << "ds is " << vs << "\n";
         i = i % curve_points.size();
         // scene is rendered to the back buffer, so swap to front for display
