@@ -12,7 +12,7 @@ layout(location = 0) in vec3 VertexPosition;
 layout(location = 1) in vec3 VertexNormal;
 
 uniform mat4 perspectiveMatrix;
-uniform mat4 modelviewMatrix = mat4(1.f);
+uniform mat4 modelviewMatrix ;
 // output to be interpolated between vertices and passed to the fragment stage
 
 out vec3 FragNormal;

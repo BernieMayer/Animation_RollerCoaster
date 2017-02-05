@@ -291,6 +291,7 @@ void renderCurve(GLuint vao, int numPoints)
 
   glDrawArrays( GL_LINE_STRIP, 0, numPoints);
 
+  CheckGLErrors("renderCurve");
   //glBindVertexArray(0);
 }
 
@@ -408,14 +409,16 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 
     //Add the control points to the lists
     //These points will determine the curve
+    
     points->push_back(vec3(0,0,0));
     points->push_back(vec3(1,0,0));
     points->push_back(vec3(2,0,0));
-    points->push_back(vec3(3,1,2));
-    points->push_back(vec3(3, 2,3));
+    points->push_back(vec3(3,0.5,2));
+    points->push_back(vec3(3, 1,2));
     points->push_back(vec3(3, 0, 5));
     points->push_back(vec3(0, 0, 5));
     points->push_back(vec3(0,0,0));
+
 
 
     int j;
@@ -581,6 +584,7 @@ int main(int argc, char *argv[])
 	mat4 perspectiveMatrix = perspective(radians(80.f), 1.f, 0.1f, 20.f);
   double t = 0;
   int i = index_of_highest_point;
+  bool phases_of_the_coaster = true;
     // run an event-triggered main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -599,6 +603,7 @@ int main(int argc, char *argv[])
         //loadUniforms(beadProg, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
 
 
+
         renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
 
 
@@ -606,7 +611,8 @@ int main(int argc, char *argv[])
 
         //note vs = v * delta_t
 
-        double v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 10.0f));
+
+        double v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 6.0f));
 
         double vs = v * 1.f/60.f;
 
@@ -616,7 +622,35 @@ int main(int argc, char *argv[])
         beadPos_future = arcLengthParameterization(beadPos,i , curve_points, vs);
         beadPos_prev = beadPos;
 
-        double r = pow(calculate_x(beadPos_prev, beadPos ,beadPos_future), 2) + pow(calculate_c(beadPos_prev, beadPos_future) ,2);
+        double x = calculate_x(beadPos_prev, beadPos ,beadPos_future);
+        double c = calculate_c(beadPos_prev, beadPos_future);
+
+        //Calcualating the radius of the curvature
+        double r = (pow(x, 2) + pow(c, 2))/(2 * x);
+        double k = 1.0f/r;
+
+        vec3 n = 1.0f/(length(beadPos_future - 2.0f * beadPos + beadPos_prev))
+                *  (beadPos_future - 2.0f * beadPos + beadPos_prev);
+
+
+        //Could change this to be simpler
+        vec3 acc_perpendicular = (float) k * n;
+        //Gravity is added in this case, since GRAVITY is positive
+        vec3 Normal_cart = acc_perpendicular + GRAVITY;
+
+        vec3 Tangent = beadPos_future - beadPos;
+        vec3 T_tmp = normalize(Tangent);
+
+        vec3 normalizd_Normal_cart = normalize(Normal_cart);
+
+        vec3 B = cross(T_tmp, normalizd_Normal_cart);
+        vec3 normalized_B = normalize(B);
+
+        mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_tmp,0), vec4(beadPos_future, 1));
+
+        loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), ModelMatrix);
+        render(vao, 0, indices.size());
+
 
         beadPos = beadPos_future;
         //std::cout << "ds is " << vs << "\n";
