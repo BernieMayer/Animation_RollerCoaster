@@ -355,6 +355,24 @@ void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 	indices->push_back(0);
 }
 
+void generateCart(vector<vec3>* vertices, std::vector<vec3>* normals,
+   vector<unsigned int>* indices, float width)
+{
+
+  vertices->push_back(vec3(0,0,0));
+  vertices->push_back(vec3(1,0,0));
+  vertices->push_back(vec3(1,1,0));
+  vertices->push_back(vec3(0,1,0));
+
+  vertices->push_back(vec3(0,0,1));
+  vertices->push_back(vec3(1,0,1));
+  vertices->push_back(vec3(1,1,1));
+  vertices->push_back(vec3(0,1,1));
+
+
+
+}
+
 
 vec3 arcLengthParameterization(vec3 bead_pos, int& i, vector<vec3> points, double deltaS)
 {
@@ -433,9 +451,10 @@ void generateSecondLineForTrack(vector<vec3> current_Points,
       vec3 B = cross(normalized_Tangent, normalized_normal);
       vec3 B_hat = normalize(B);
 
-      vec3 newPoint = current_Points.at(i) + 0.5f * B_hat;
+      vec3 newPoint = current_Points.at(i) + 0.05f * B_hat;
       newPoints->push_back(newPoint);
     }
+    newPoints->push_back(newPoints->at(0));
 
     for (int j = 0; j < newPoints->size(); j++)
     {
@@ -452,22 +471,18 @@ void generateCurve(vector<vec3>* points, vector<vec3>* normals)
 
     VectorContainerVec3f vectors;
 
-    std::string file("./Track2.con");
+    std::string file("./Track3.con");
+    std::cout<< "Now reading from file named" << file << "\n";
     loadVec3fFromFile(vectors, file);
 
     for (int i = 0; i < vectors.size(); i++)
     {
       Vec3f vec = vectors.at(i);
       std::cout << vec << std::endl;
-      points->push_back(vec3(5 * vec.m_x, 0, 5 * vec.m_y));
+      points->push_back(vec3(5 * vec.m_x, 5 * vec.m_z, 5 * vec.m_y));
     }
 
-    points->at(0).y = 0;
-    points->at(2).y = 1.9;
 
-    points->at(3).y = 1.0;
-
-    points->at(5).y = 0.3;
     //points->at(4).y = 0.2;
 
     //points->at(5).y = 0.5;
@@ -700,6 +715,7 @@ int main(int argc, char *argv[])
         ///
         //vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
         beadPos = arcLengthParameterization(beadPos,i , curve_points, vs);
+        //activeCamera->pos = beadPos + vec3(0,0.1,0);
         beadPos_prev = curve_points.at( (i - 10) % curve_points.size());
         beadPos_future = curve_points.at( (i + 10) % curve_points.size());
 
