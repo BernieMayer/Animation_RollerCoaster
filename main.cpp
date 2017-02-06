@@ -60,6 +60,7 @@ GLFWwindow* window = 0;
 mat4 winRatio = mat4(1.f);
 
 const vec3 GRAVITY = vec3(0, 9.81, 0);
+bool isFirstPerson = true;
 
 // --------------------------------------------------------------------------
 // GLFW callback functions
@@ -80,6 +81,18 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     {
       std::cout << "Now printing to the camera location (" << activeCamera->pos.x << "," << activeCamera->pos.y << "," << activeCamera->pos.z << ")" <<"\n";
       //std::cout << "Now "
+    } else if (key == GLFW_KEY_F && action == GLFW_PRESS)
+    {
+      if (isFirstPerson)
+      {
+        isFirstPerson = false;
+        //Camera cam = Camera(vec3(0, 0, -1), vec3(0.31649,-0.564746,4.26627));
+
+        activeCamera->pos = vec3(0.31649,-0.564746,4.26627);
+        activeCamera->dir = vec3(0, 0, -1);
+      } else {
+        isFirstPerson = true;
+      }
     }
 }
 
@@ -298,7 +311,7 @@ void renderCurve(GLuint vao, int numPoints)
 {
   glBindVertexArray(vao);
 
-  glDrawArrays( GL_LINE_STRIP, 0, numPoints);
+  glDrawArrays( GL_LINE_LOOP, 0, numPoints);
 
   CheckGLErrors("renderCurve");
   //glBindVertexArray(0);
@@ -504,8 +517,8 @@ void generateSecondLineForTrack(vector<vec3> current_Points,
       vec3 B = cross(normalized_Tangent, normalized_normal);
       vec3 B_hat = normalize(B);
 
-      vec3 newPoint1 = posCurrent + 0.05f * B_hat;
-      vec3 newPoint2 = posCurrent - 0.05f * B_hat;
+      vec3 newPoint1 = posCurrent + 0.3f * B_hat;
+      vec3 newPoint2 = posCurrent - 0.3f * B_hat;
       newPoints1->push_back(newPoint1);
       newPoints2->push_back(newPoint2);
     }
@@ -751,11 +764,13 @@ int main(int argc, char *argv[])
   double v_dec = 0.0f;
   double l_dec = 0.0f;
 
+
+
     // run an event-triggered main loop
     while (!glfwWindowShouldClose(window))
     {
+    glClearColor(0.7,0.7,0.7, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);		//Clear color and depth buffers (Haven't covered yet)
-
 		glUseProgram(program);
 
 		loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
@@ -854,6 +869,13 @@ int main(int argc, char *argv[])
         vec3 T = cross(normalizd_Normal_cart, normalized_B);
         vec3 T_hat = normalize(T);
         mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos, 1));
+
+        if (isFirstPerson){
+        activeCamera->pos = beadPos + 1.0f * normalizd_Normal_cart;
+        activeCamera->up = normalizd_Normal_cart;
+        activeCamera->dir = T_tmp;
+        activeCamera->right = normalized_B;
+        }
         loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), ModelMatrix);
         render(vao, 0, indices.size());
 
