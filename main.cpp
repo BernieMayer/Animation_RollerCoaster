@@ -479,7 +479,8 @@ int highestPoint(std::vector<vec3> points)
 
 
 void generateSecondLineForTrack(vector<vec3> current_Points,
-                                vector<vec3>* newPoints,
+                                vector<vec3>* newPoints1,
+                                std::vector<vec3>* newPoints2,
                                 vector<vec3>* normals)
 {
     for (int i = 0; i < current_Points.size(); i++)
@@ -503,12 +504,14 @@ void generateSecondLineForTrack(vector<vec3> current_Points,
       vec3 B = cross(normalized_Tangent, normalized_normal);
       vec3 B_hat = normalize(B);
 
-      vec3 newPoint = current_Points.at(i) + 0.05f * B_hat;
-      newPoints->push_back(newPoint);
+      vec3 newPoint1 = posCurrent + 0.05f * B_hat;
+      vec3 newPoint2 = posCurrent - 0.05f * B_hat;
+      newPoints1->push_back(newPoint1);
+      newPoints2->push_back(newPoint2);
     }
-    newPoints->push_back(newPoints->at(0));
+    //newPoints1->push_back(newPoints->at(0));
 
-    for (int j = 0; j < newPoints->size(); j++)
+    for (int j = 0; j < newPoints1->size(); j++)
     {
       normals->push_back(vec3(0,1,0));
     }
@@ -680,6 +683,9 @@ int main(int argc, char *argv[])
   GLuint curve2_vao;
   VertexBuffers curve2_vbo;
 
+  GLuint curve3_vao;
+  VertexBuffers curve3_vbo;
+
 	//Generate object ids
 	glGenVertexArrays(1, &vao);
 	glGenBuffers(VertexBuffers::COUNT, vbo.id);
@@ -692,9 +698,13 @@ int main(int argc, char *argv[])
   glGenVertexArrays(1, &curve2_vao);
   glGenBuffers(VertexBuffers::COUNT, curve2_vbo.id);
 
+  glGenVertexArrays(1, &curve3_vao);
+  glGenBuffers(VertexBuffers::COUNT, curve3_vbo.id);
+
 	initVAO(vao, vbo);
   initVAO(curve_vao, curve_vbo);
   initVAO(curve2_vao, curve2_vbo);
+  initVAO(curve3_vao, curve3_vbo);
 
 	//Geometry information
 	vector<vec3> points, normals;
@@ -709,7 +719,8 @@ int main(int argc, char *argv[])
   generateCurve(&curve_points, &curve_normals);
 
   vector<vec3> curve2_points, curve2_normals;
-  generateSecondLineForTrack(curve_points, &curve2_points, &curve2_normals);
+  vector<vec3> curve3_points;
+  generateSecondLineForTrack(curve_points, &curve2_points,&curve3_points, &curve2_normals);
 
   int index_of_highest_point = highestPoint(curve_points);
   vec3 H = curve_points.at(index_of_highest_point);
@@ -722,6 +733,7 @@ int main(int argc, char *argv[])
 	loadBuffer(vbo, points, normals, indices);
   loadCurveBuffer(curve_vbo, curve_points, curve_normals);
   loadCurveBuffer(curve2_vbo, curve2_points, curve2_normals);
+  loadCurveBuffer(curve3_vbo, curve3_points, curve2_normals);
 
 
 
@@ -732,6 +744,13 @@ int main(int argc, char *argv[])
   double t = 0;
   int i = index_of_highest_point;
   bool phases_of_the_coaster = true;
+
+  bool lifting_stage = false;
+  bool gravityFreeFall = false;
+  bool deacc_Stage = true;
+  double v_dec = 0.0f;
+  double l_dec = 0.0f;
+
     // run an event-triggered main loop
     while (!glfwWindowShouldClose(window))
     {
@@ -745,7 +764,8 @@ int main(int argc, char *argv[])
         //render(vao, 0, indices.size());
 
         renderCurve(curve_vao, curve_points.size());
-        renderCurve(curve2_vao, curve_points.size());
+        renderCurve(curve2_vao, curve2_points.size());
+        renderCurve(curve3_vao, curve3_points.size());
 
 
         //loadUniforms(beadProg, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
@@ -760,10 +780,45 @@ int main(int argc, char *argv[])
         //note vs = v * delta_t
 
 
-        double v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 1.f ));
 
-        double vs = v * 1.f/60.f;
+        if (gravityFreeFall && ( (float) (i % curve_points.size())/ (float) curve_points.size()) > 0.40)
+        {
+          //std::cout << "Now in deacc_Stage stage \n";
+          gravityFreeFall = false;
+          deacc_Stage = true;
+          lifting_stage = false;
+          v_dec = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 1.f ));
+          l_dec = length(curve_points.at(i%curve_points.size()) - curve_points.at(curve_points.size() -1));
+        } else if (!gravityFreeFall && beadPos.y > (H.y - 0.5))
+        {
+          //std::cout << "Now in gravity Free fall stage \n";
+          gravityFreeFall = true;
+          deacc_Stage = false;
+          lifting_stage = false;
+        } else if (deacc_Stage && (i == (curve_points.size() - 12)))
+        {
+          //std::cout << "Now in lifting stage \n";
+          gravityFreeFall = false;
+          deacc_Stage = false;
+          lifting_stage = true;
+        }
 
+
+        double v;
+
+        //The velocity will change here..
+        if (gravityFreeFall)
+        {
+        v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 1.f ));
+      } else if (deacc_Stage)  {
+        v = v_dec * length(beadPos - curve_points.at(curve_points.size() -1))/(l_dec);
+      } else
+      {
+        v = v_dec;
+      }
+
+
+        double vs = v * 1.0f/60.0f;
 
         ///
         //vec3 arcLengthParameterization(vec3 bead_pos, int i, vector<vec3> points, double deltaS)
@@ -786,7 +841,7 @@ int main(int argc, char *argv[])
         //Could change this to be simpler
         vec3 acc_perpendicular = (float) k * n;
         //Gravity is added in this case, since GRAVITY is positive
-        vec3 Normal_cart = acc_perpendicular + GRAVITY;
+        vec3 Normal_cart = +(acc_perpendicular + GRAVITY);
 
         vec3 Tangent = beadPos_future - beadPos_prev;
         vec3 T_tmp = normalize(Tangent);
@@ -803,7 +858,7 @@ int main(int argc, char *argv[])
         render(vao, 0, indices.size());
 
 
-        renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
+        //renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
         //std::cout << "ds is " << vs << "\n";
         i = i % curve_points.size();
         // scene is rendered to the back buffer, so swap to front for display
