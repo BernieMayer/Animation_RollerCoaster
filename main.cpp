@@ -360,14 +360,66 @@ void generateCart(vector<vec3>* vertices, std::vector<vec3>* normals,
 {
 
   vertices->push_back(vec3(0,0,0));
-  vertices->push_back(vec3(1,0,0));
-  vertices->push_back(vec3(1,1,0));
-  vertices->push_back(vec3(0,1,0));
+  vertices->push_back(vec3(width * 1,0,0));
+  vertices->push_back(vec3(width * 1,width * 1,0));
+  vertices->push_back(vec3(0,width * 1,0));
 
-  vertices->push_back(vec3(0,0,1));
-  vertices->push_back(vec3(1,0,1));
-  vertices->push_back(vec3(1,1,1));
-  vertices->push_back(vec3(0,1,1));
+  vertices->push_back(vec3(0,0,width * 1));
+  vertices->push_back(vec3(width * 1,0,width * 1));
+  vertices->push_back(vec3(width * 1, width * 1, width * 1));
+  vertices->push_back(vec3(0,width * 1, width * 1));
+
+  indices->push_back(0);
+  indices->push_back(1);
+  indices->push_back(2);
+
+  indices->push_back(2);
+	indices->push_back(3);
+	indices->push_back(0);
+
+  indices->push_back(0);
+  indices->push_back(4);
+  indices->push_back(7);
+
+  indices->push_back(7);
+  indices->push_back(0);
+  indices->push_back(3);
+
+  indices->push_back(1);
+  indices->push_back(2);
+  indices->push_back(5);
+
+  indices->push_back(6);
+  indices->push_back(5);
+  indices->push_back(2);
+
+  indices->push_back(5);
+  indices->push_back(6);
+  indices->push_back(4);
+
+  indices->push_back(4);
+  indices->push_back(7);
+  indices->push_back(6);
+
+  indices->push_back(0);
+  indices->push_back(1);
+  indices->push_back(5);
+
+  indices->push_back(5);
+  indices->push_back(4);
+  indices->push_back(0);
+
+  int half = vertices->size()/ 2;
+  for (int i = 0; i < half; i++)
+  {
+    normals->push_back(vec3(0.f, 0.f, 1.f));
+  }
+
+  for (int i = half; i < vertices->size(); i++)
+  {
+    normals->push_back(vec3(0.0f, 1.0f, 0.f));
+  }
+
 
 
 
@@ -648,7 +700,8 @@ int main(int argc, char *argv[])
 	vector<vec3> points, normals;
 	vector<unsigned int> indices;
 
-	generateSquare(&points, &normals, &indices, 1.f);
+	//generateSquare(&points, &normals, &indices, 1.f);
+  generateCart(&points, &normals, &indices, 0.4f);
 
   vector<vec3> curve_points, curve_normals;
   vector<unsigned int> curve_indices;
