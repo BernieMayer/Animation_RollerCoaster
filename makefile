@@ -8,7 +8,7 @@ CC=g++
 CFLAGS=-g -Wall -std=c++11 -Wno-misleading-indentation
 
 # Executable Name
-EXE=boilerplate
+EXE=coaster
 
 # Source files
 SRC=*.cpp middleware/glad/src/glad.c

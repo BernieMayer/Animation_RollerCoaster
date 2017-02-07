@@ -60,7 +60,7 @@ GLFWwindow* window = 0;
 mat4 winRatio = mat4(1.f);
 
 const vec3 GRAVITY = vec3(0, 9.81, 0);
-bool isFirstPerson = true;
+bool isFirstPerson = false;
 
 // --------------------------------------------------------------------------
 // GLFW callback functions
@@ -80,6 +80,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     else if (key == GLFW_KEY_P && action == GLFW_PRESS)
     {
       std::cout << "Now printing to the camera location (" << activeCamera->pos.x << "," << activeCamera->pos.y << "," << activeCamera->pos.z << ")" <<"\n";
+
+      printf("Now printing the camerea dir( %f, %f, %f) \n", activeCamera->dir.x, activeCamera->dir.y, activeCamera->dir.z );
+      printf("Now printing the camera right ( %f, %f, %f) \n", activeCamera->right.x,activeCamera->right.y,activeCamera->right.z );
+      printf("Now printing the camera up (%f, %f, %f) \n", activeCamera->up.x , activeCamera->right.y, activeCamera->right.z);
       //std::cout << "Now "
     } else if (key == GLFW_KEY_F && action == GLFW_PRESS)
     {
@@ -88,8 +92,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
         isFirstPerson = false;
         //Camera cam = Camera(vec3(0, 0, -1), vec3(0.31649,-0.564746,4.26627));
 
-        activeCamera->pos = vec3(0.31649,-0.564746,4.26627);
-        activeCamera->dir = vec3(0, 0, -1);
+        activeCamera->pos = vec3(0.613712,2.25309,10.3123);
+        activeCamera->dir = vec3( -0.058043, -0.213090, -0.975307);
+        activeCamera->right = vec3(1,0,0);
+        //activeCamera->right = vec3( 0.998291, -0.005760, -0.058152);
+        //activeCamera->up = vec3(-0.006774, -0.005760, -0.058152);
       } else {
         isFirstPerson = true;
       }
@@ -366,6 +373,29 @@ void generateSquare(vector<vec3>* vertices, vector<vec3>* normals,
 	indices->push_back(2);
 	indices->push_back(3);
 	indices->push_back(0);
+}
+
+void generatePlane(vector<vec3>* vertices, vector<vec3>* normals,
+            vector<unsigned int>* indices, float width)
+{
+  vertices->push_back(vec3(-width*0.5f,  -1.f, -width*0.5f));
+  vertices->push_back(vec3(width*0.5f,  -1.f , -width*0.5f));
+  vertices->push_back(vec3(width*0.5f,  -1.f , width*0.5f));
+  vertices->push_back(vec3(-width*0.5f,  -1.f, width*0.5f));
+
+  normals->push_back(vec3(1.f, 0.f, 1.f));
+  normals->push_back(vec3(1.f, 0.f, 1.f));
+  normals->push_back(vec3(1.f, 0.f, 1.f));
+  normals->push_back(vec3(1.f, 0.f, 1.f));
+
+  //First triangle
+  indices->push_back(0);
+  indices->push_back(1);
+  indices->push_back(2);
+  //Second triangle
+  indices->push_back(2);
+  indices->push_back(3);
+  indices->push_back(0);
 }
 
 void generateCart(vector<vec3>* vertices, std::vector<vec3>* normals,
@@ -689,6 +719,9 @@ int main(int argc, char *argv[])
 	GLuint vao;
 	VertexBuffers vbo;
 
+  GLuint vao_plane;
+  VertexBuffers  vbo_plane;
+
 
   GLuint curve_vao;
   VertexBuffers curve_vbo;
@@ -703,6 +736,8 @@ int main(int argc, char *argv[])
 	glGenVertexArrays(1, &vao);
 	glGenBuffers(VertexBuffers::COUNT, vbo.id);
 
+  glGenVertexArrays(1, &vao_plane);
+  glGenBuffers(VertexBuffers::COUNT, vbo_plane.id);
 
   //Generate curve ids
   glGenVertexArrays(1, &curve_vao);
@@ -715,6 +750,7 @@ int main(int argc, char *argv[])
   glGenBuffers(VertexBuffers::COUNT, curve3_vbo.id);
 
 	initVAO(vao, vbo);
+  initVAO(vao_plane, vbo_plane);
   initVAO(curve_vao, curve_vbo);
   initVAO(curve2_vao, curve2_vbo);
   initVAO(curve3_vao, curve3_vbo);
@@ -725,6 +761,11 @@ int main(int argc, char *argv[])
 
 	//generateSquare(&points, &normals, &indices, 1.f);
   generateCart(&points, &normals, &indices, 0.4f);
+
+  vector <vec3> plane_points, plane_normals;
+  vector <unsigned int> plane_indices;
+
+  generatePlane(&plane_points, &plane_normals, &plane_indices, 40.f);
 
   vector<vec3> curve_points, curve_normals;
   vector<unsigned int> curve_indices;
@@ -744,6 +785,7 @@ int main(int argc, char *argv[])
   vec3 beadPos_future = beadPos_future; //used to calculate the tangential acceleratiion
 
 	loadBuffer(vbo, points, normals, indices);
+  loadBuffer(vbo_plane, plane_points, plane_normals, plane_indices);
   loadCurveBuffer(curve_vbo, curve_points, curve_normals);
   loadCurveBuffer(curve2_vbo, curve2_points, curve2_normals);
   loadCurveBuffer(curve3_vbo, curve3_points, curve2_normals);
@@ -764,6 +806,7 @@ int main(int argc, char *argv[])
   double v_dec = 0.0f;
   double l_dec = 0.0f;
 
+  vector<mat4> modelMatrices;
 
 
     // run an event-triggered main loop
@@ -796,7 +839,7 @@ int main(int argc, char *argv[])
 
 
 
-        if (gravityFreeFall && ( (float) (i % curve_points.size())/ (float) curve_points.size()) > 0.40)
+        if (gravityFreeFall && ( (float) (i % curve_points.size())/ (float) curve_points.size()) > 0.60)
         {
           //std::cout << "Now in deacc_Stage stage \n";
           gravityFreeFall = false;
@@ -824,7 +867,7 @@ int main(int argc, char *argv[])
         //The velocity will change here..
         if (gravityFreeFall)
         {
-        v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 1.f ));
+        v = sqrt( (2.0f * dot(GRAVITY , (H - beadPos)) + 2.f ));
       } else if (deacc_Stage)  {
         v = v_dec * length(beadPos - curve_points.at(curve_points.size() -1))/(l_dec);
       } else
@@ -871,7 +914,7 @@ int main(int argc, char *argv[])
         mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos, 1));
 
         if (isFirstPerson){
-        activeCamera->pos = beadPos + 1.0f * normalizd_Normal_cart;
+        activeCamera->pos = beadPos + 0.75f * normalizd_Normal_cart;
         activeCamera->up = normalizd_Normal_cart;
         activeCamera->dir = T_tmp;
         activeCamera->right = normalized_B;
@@ -879,6 +922,8 @@ int main(int argc, char *argv[])
         loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), ModelMatrix);
         render(vao, 0, indices.size());
 
+        loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
+        render(vao_plane, 0, plane_indices.size());
 
         //renderBead(beadProg,beadPos, winRatio*perspectiveMatrix*cam.getMatrix(),mat4(1.f));
         //std::cout << "ds is " << vs << "\n";
