@@ -1,0 +1,40 @@
+
+
+Operating this program:
+
+Right Mouse - Zoom out
+Left Mouse - Rotate the camera trackball right
+
+To run type:
+make
+./coaster
+
+Description:
+
+The roller coaster has 3 main phases
+
+Lifting:
+- In this phase the rollercoaster is being lifted up to its max height
+and is going at constant velocity
+
+Gravity Free Fall:
+- After the coaster reaches it's max height it's speed will now be
+decided by gravity
+
+Deaceleration phase
+-In this phase the rollercoaster is deaccelerating and will eventually
+come to a stop
+
+
+This code uses a Fresnet frame in order to construct the model matrix
+
+A fresnet frame is made up of 3 vectors.
+
+A normal, which is how the passengers of the coaster have to be aligned
+so that they don't fall off the track
+
+A Tangent, which indicates the direction that the roller coaster is going
+
+A Binormal, which is the cross product of the normal and the tangent.
+This vector is mainly used to determine where the tracks should be so
+that the cart does not fall off
