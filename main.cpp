@@ -62,6 +62,8 @@ mat4 winRatio = mat4(1.f);
 const vec3 GRAVITY = vec3(0, 9.81, 0);
 bool isFirstPerson = false;
 
+
+const int NUMCARTS = 10;
 // --------------------------------------------------------------------------
 // GLFW callback functions
 
@@ -501,6 +503,42 @@ vec3 arcLengthParameterization(vec3 bead_pos, int& i, vector<vec3> points, doubl
   }
 }
 
+mat4 makeFresnetFrame(vec3 bead_pos, vector<vec3> curve_points, double velocity,  int i)
+{
+
+  double vs = velocity * 1.0f/60.0f;
+
+  vec3 beadPos_tmp = arcLengthParameterization(beadPos_tmp, i, curve_points, vs);
+
+  vec3 beadPos_prev = curve_points.at( (i - 10) % curve_points.size());
+  vec3 beadPos_future = curve_points.at( (i + 10) % curve_points.size());
+  double x = calculate_x(beadPos_prev, beadPos_tmp ,beadPos_future);
+  double c = calculate_c(beadPos_prev, beadPos_future);
+
+  double r = (pow(x, 2) + pow(c, 2))/(2 * x);
+  double k = 1.0f/r;
+
+  vec3 n = 1.0f/(length(beadPos_future - 2.0f * beadPos_tmp + beadPos_prev))
+             *  (beadPos_future - 2.0f * beadPos_tmp + beadPos_prev);
+
+  vec3 acc_perpendicular = (float) k * n;
+
+  vec3 Normal_cart = +(acc_perpendicular + GRAVITY);
+
+  vec3 Tangent = beadPos_future - beadPos_prev;
+  vec3 T_tmp = normalize(Tangent);
+
+  vec3 normalizd_Normal_cart = normalize(Normal_cart);
+
+  vec3 B = cross(T_tmp, normalizd_Normal_cart);
+  vec3 normalized_B = normalize(B);
+
+  vec3 T = cross(normalizd_Normal_cart, normalized_B);
+  vec3 T_hat = normalize(T);
+  mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos_tmp, 1));
+  return ModelMatrix;
+}
+
 int highestPoint(std::vector<vec3> points)
 {
   //assume points is at least one element
@@ -808,6 +846,49 @@ int main(int argc, char *argv[])
 
   vector<mat4> modelMatrices;
 
+  vec3 beadPos_tmp = beadPos;
+  int j = index_of_highest_point;
+  for (int a = 0; a < NUMCARTS; a++)
+  {
+    double v_tmp = sqrt( (2.0f * dot(GRAVITY , (H - beadPos_tmp)) + 2.f ));
+
+    double vs = v_tmp * 1.0f/60.0f;
+
+    beadPos_tmp = arcLengthParameterization(beadPos_tmp, j, curve_points,  vs);
+
+    beadPos_prev = curve_points.at( (j - 10) % curve_points.size());
+    beadPos_future = curve_points.at( (j + 10) % curve_points.size());
+    double x = calculate_x(beadPos_prev, beadPos_tmp ,beadPos_future);
+    double c = calculate_c(beadPos_prev, beadPos_future);
+
+    double r = (pow(x, 2) + pow(c, 2))/(2 * x);
+    double k = 1.0f/r;
+
+    vec3 n = 1.0f/(length(beadPos_future - 2.0f * beadPos_tmp + beadPos_prev))
+               *  (beadPos_future - 2.0f * beadPos_tmp + beadPos_prev);
+
+    vec3 acc_perpendicular = (float) k * n;
+
+    vec3 Normal_cart = +(acc_perpendicular + GRAVITY);
+
+        vec3 Tangent = beadPos_future - beadPos_prev;
+        vec3 T_tmp = normalize(Tangent);
+
+        vec3 normalizd_Normal_cart = normalize(Normal_cart);
+
+        vec3 B = cross(T_tmp, normalizd_Normal_cart);
+        vec3 normalized_B = normalize(B);
+
+        vec3 T = cross(normalizd_Normal_cart, normalized_B);
+        vec3 T_hat = normalize(T);
+        mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos_tmp, 1));
+        printf("The modelMatrices at %i and j is %i is (%f, %f, %f) \n", a, j, beadPos_tmp.x, beadPos_tmp.y,
+        beadPos_tmp.z);
+        modelMatrices.push_back(ModelMatrix);
+
+    //mat4 matrix = ?
+    //modelMatrices.push_back(matrix);
+  }
 
     // run an event-triggered main loop
     while (!glfwWindowShouldClose(window))
@@ -904,24 +985,46 @@ int main(int argc, char *argv[])
         vec3 Tangent = beadPos_future - beadPos_prev;
         vec3 T_tmp = normalize(Tangent);
 
-        vec3 normalizd_Normal_cart = normalize(Normal_cart);
+        vec3 normalized_Normal_cart = normalize(Normal_cart);
 
-        vec3 B = cross(T_tmp, normalizd_Normal_cart);
+        vec3 B = cross(T_tmp, normalized_Normal_cart);
         vec3 normalized_B = normalize(B);
 
-        vec3 T = cross(normalizd_Normal_cart, normalized_B);
+        vec3 T = cross(normalized_Normal_cart, normalized_B);
         vec3 T_hat = normalize(T);
-        mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos, 1));
-
+        mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalized_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos, 1));
+        mat4 ModelMatrix2 = mat4(vec4(normalized_B,0),vec4(normalized_Normal_cart,0), vec4(T_hat,0), vec4(beadPos- vec3(0.4, 0,0),1));
         if (isFirstPerson){
-        activeCamera->pos = beadPos + 0.75f * normalizd_Normal_cart;
-        activeCamera->up = normalizd_Normal_cart;
+        activeCamera->pos = beadPos + 0.75f * normalized_Normal_cart;
+        activeCamera->up = normalized_Normal_cart;
         activeCamera->dir = T_tmp;
         activeCamera->right = normalized_B;
         }
-        loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), ModelMatrix);
+
+
+        //loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), ModelMatrix);
+        //render(vao, 0, indices.size());
+
+        loadUniforms(program, winRatio * perspectiveMatrix * cam.getMatrix(), ModelMatrix);
         render(vao, 0, indices.size());
 
+        for (int l = 0; l <NUMCARTS;  l++)
+        {
+          loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), modelMatrices.at(0));
+          render(vao, 0, indices.size());
+        }
+
+        //loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), modelMatrices.at(0));
+        //render(vao, 0, indices.size());
+
+        modelMatrices.pop_back();
+        modelMatrices.push_back(ModelMatrix);
+        /*
+        loadUniforms(program, winRatio *perspectiveMatrix * cam.getMatrix(), modelMatrices.at(1));
+        render(vao, 0, indices.size());
+        loadUniforms(program, winRatio *perspectiveMatrix * cam.getMatrix(), modelMatrices.at(2));
+        render(vao, 0, indices.size());
+        */
         loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), mat4(1.f));
         render(vao_plane, 0, plane_indices.size());
 
