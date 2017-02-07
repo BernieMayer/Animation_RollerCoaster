@@ -1,9 +1,14 @@
+Roller coaster assginment
+Bernie Mayer
+10124540
 
 
 Operating this program:
 
 Right Mouse - Zoom out
 Left Mouse - Rotate the camera trackball right
+
+F - Toggle between first person view and third person view
 
 To run type:
 make
@@ -38,3 +43,7 @@ A Tangent, which indicates the direction that the roller coaster is going
 A Binormal, which is the cross product of the normal and the tangent.
 This vector is mainly used to determine where the tracks should be so
 that the cart does not fall off
+
+
+I used github for this project here is the link.
+https://github.com/BernieMayer/Animation_RollerCoaster.git

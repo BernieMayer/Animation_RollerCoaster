@@ -385,10 +385,10 @@ void generatePlane(vector<vec3>* vertices, vector<vec3>* normals,
   vertices->push_back(vec3(width*0.5f,  -1.f , width*0.5f));
   vertices->push_back(vec3(-width*0.5f,  -1.f, width*0.5f));
 
-  normals->push_back(vec3(1.f, 0.f, 1.f));
-  normals->push_back(vec3(1.f, 0.f, 1.f));
-  normals->push_back(vec3(1.f, 0.f, 1.f));
-  normals->push_back(vec3(1.f, 0.f, 1.f));
+  normals->push_back(vec3(1.f, 0.f, 0.f));
+  normals->push_back(vec3(1.f, 0.f, 0.f));
+  normals->push_back(vec3(1.f, 0.f, 0.f));
+  normals->push_back(vec3(1.f, 0.f, 0.f));
 
   //First triangle
   indices->push_back(0);
@@ -882,8 +882,8 @@ int main(int argc, char *argv[])
         vec3 T = cross(normalizd_Normal_cart, normalized_B);
         vec3 T_hat = normalize(T);
         mat4 ModelMatrix = mat4(vec4(normalized_B,0), vec4(normalizd_Normal_cart,0),  vec4(T_hat,0), vec4(beadPos_tmp, 1));
-        printf("The modelMatrices at %i and j is %i is (%f, %f, %f) \n", a, j, beadPos_tmp.x, beadPos_tmp.y,
-        beadPos_tmp.z);
+        //printf("The modelMatrices at %i and j is %i is (%f, %f, %f) \n", a, j, beadPos_tmp.x, beadPos_tmp.y,
+        //beadPos_tmp.z);
         modelMatrices.push_back(ModelMatrix);
 
     //mat4 matrix = ?
@@ -1007,12 +1007,12 @@ int main(int argc, char *argv[])
 
         loadUniforms(program, winRatio * perspectiveMatrix * cam.getMatrix(), ModelMatrix);
         render(vao, 0, indices.size());
-
+        /*
         for (int l = 0; l <NUMCARTS;  l++)
         {
           loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), modelMatrices.at(0));
           render(vao, 0, indices.size());
-        }
+        } */
 
         //loadUniforms(program, winRatio*perspectiveMatrix*cam.getMatrix(), modelMatrices.at(0));
         //render(vao, 0, indices.size());
